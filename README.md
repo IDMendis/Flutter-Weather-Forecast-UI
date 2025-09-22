@@ -1,16 +1,12 @@
-# my_app
+# 🌤️ Flutter Weather Forecast UI
 
-A new Flutter project.
+This is a beginner Flutter project I created to **learn and practice Flutter UI development**.  
+The goal of this project is not to build a fully working weather app (yet), but to explore:
 
-## Getting Started
+- How **widgets** are placed and structured
+- Using **StatefulWidget** and **StatelessWidget**
+- Styling with **gradients**, **Google Fonts**, and **custom layouts**
+- Displaying **images, icons, and text**
 
-This project is a starting point for a Flutter application.
 
-A few resources to get you started if this is your first Flutter project:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
