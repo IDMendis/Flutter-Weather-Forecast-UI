@@ -1,8 +1,10 @@
 import "package:flutter/material.dart";
 import 'package:google_fonts/google_fonts.dart';
+// ignore: depend_on_referenced_packages
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'Week_Screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -84,217 +86,241 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        height: MediaQuery.of(context).size.height,
-        width: MediaQuery.of(context).size.width,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFFFFA500), // Orange
-              const Color(0xFF8A2BE2).withOpacity(0.6), // Purple
-              const Color(0xFF000000), // Black
-            ],
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.only(top: 60.0, right: 16.0, left: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Timezone, greet and more icon in a row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Timezone and greet
-                  RichText(
-                    text: TextSpan(
-                      style: GoogleFonts.openSans(height: 1.1),
-                      children: <TextSpan>[
-                        TextSpan(
-                          text: '${timezone ?? ""}\n',
-                          style: TextStyle(
-                            fontSize: 16.0,
-                            fontWeight: FontWeight.w100,
-                            color: const Color(0xFFFFFFFF).withOpacity(0.7),
-                          ),
-                        ),
-                        TextSpan(
-                          text: greetings ?? "",
-                          style: const TextStyle(
-                            fontSize: 20.0,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFFFFFFFF),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // more icon
-                  Container(
-                    padding: const EdgeInsets.all(2.0),
-                    height: 40.0,
-                    width: 40.0,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(100.0),
-                      border: Border.all(
-                        width: 0.4,
-                        color: const Color(0xFFFFFFFF),
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.more_vert_outlined,
-                      color: Color(0xFFFFFFFF),
-                    ),
-                  ),
-                ],
-              ),
-
-              // Weather image
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Container(
-                  height: 300,
-                  width: 300,
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage("assets/images/sunny.png"),
-                    ),
-                  ),
-                ),
-              ),
-
-              // temperature, humidity, date and time
-              if (data != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16.0),
-                  child: RichText(
-                    textAlign: TextAlign.center,
-                    text: TextSpan(
-                      style: GoogleFonts.openSans(height: 1.3),
-                      children: <TextSpan>[
-                        TextSpan(
-                          text: '${data!['current_weather']['temperature']}°C\n',
-                          style: TextStyle(
-                            fontSize: 75.0,
-                            fontWeight: FontWeight.w100,
-                            color: const Color(0xFFFFFFFF).withOpacity(0.7),
-                          ),
-                        ),
-                        TextSpan(
-                          text:
-                              'Humidity ${hourlyHumidities != null ? hourlyHumidities![0].toString() : "--"}%\n',
-                          style: const TextStyle(
-                            fontSize: 20.0,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFFFFFFFF),
-                          ),
-                        ),
-                        TextSpan(
-                          text: '${formattedDate ?? ""} · ${formattedTime ?? ""}',
-                          style: TextStyle(
-                            fontSize: 14.0,
-                            color: const Color(0xFFFFFFFF).withOpacity(0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              // hourly forecast
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    gradientText("Hourly Forecast", 20.0, FontWeight.bold),
-                    Container(
-                      padding: const EdgeInsets.all(2.0),
-                      height: 30.0,
-                      width: 30.0,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFFFFF),
-                        borderRadius: BorderRadius.circular(100.0),
-                      ),
-                      child: const Icon(
-                        Icons.keyboard_arrow_left_outlined,
-                        color: Color(0xFF000000),
-                      ),
-                    ),
+      body: data == null
+          ? Container(
+              height: MediaQuery.of(context).size.height,
+              width: MediaQuery.of(context).size.width,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFFFFA500), // Orange
+                    const Color(0xFF8A2BE2).withOpacity(0.6), // Purple
+                    const Color(0xFF000000), // Black
                   ],
                 ),
               ),
-
-              // hourly list
-              if (data != null)
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(0.0),
-                    itemCount: hourlyTimes?.length ?? 0,
-                    itemBuilder: (context, index) {
-                      return Container(
-                        padding: const EdgeInsets.only(bottom: 12.0, top: 5.0),
-                        width: MediaQuery.of(context).size.width,
-                        decoration: const BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(
-                              width: 0.4,
-                              color: Color(0xFFFFFFFF),
-                            ),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // time
-                            Text(
-                              DateFormat('h a')
-                                  .format(DateTime.parse(hourlyTimes![index])),
-                              style: GoogleFonts.openSans(
-                                fontSize: 20.0,
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xFFFFFFFF),
-                              ),
-                            ),
-                            // humidity
-                            Text(
-                              '${hourlyHumidities![index]}%',
-                              style: GoogleFonts.openSans(
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+            )
+            
+      : Container(
+          height: MediaQuery.of(context).size.height,
+          width: MediaQuery.of(context).size.width,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFFFFA500),
+                const Color(0xFF8A2BE2).withOpacity(0.6),
+                const Color(0xFF000000),
+              ],
+            ),
+          ),
+          child: Padding(
+              padding: const EdgeInsets.only(top: 60.0, right: 16.0, left: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Timezone, greet and more icon in a row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Timezone and greet
+                      RichText(
+                        text: TextSpan(
+                          style: GoogleFonts.openSans(height: 1.1),
+                          children: <TextSpan>[
+                            TextSpan(
+                              text: '${timezone ?? ""}\n',
+                              style: TextStyle(
                                 fontSize: 16.0,
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xFFFFFFFF),
+                                fontWeight: FontWeight.w100,
+                                color: const Color(0xFFFFFFFF).withOpacity(0.7),
                               ),
                             ),
-                            // temperature
-                            Text(
-                              '${hourlyTemperatures![index]}°C',
-                              style: GoogleFonts.openSans(
-                                fontSize: 24.0,
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xFFFFFFFF),
+                            TextSpan(
+                              text: greetings ?? "",
+                              style: const TextStyle(
+                                fontSize: 20.0,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFFFFFFF),
                               ),
                             ),
                           ],
                         ),
-                      );
-                    },
+                      ),
+
+                      // more icon
+                      GestureDetector(  // this will make the icon tappable
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const WeekScreen(),
+                            ),
+                          );
+                          // Action for more icon tap
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(2.0),
+                          height: 40.0,
+                          width: 40.0,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(100.0),
+                            border: Border.all(
+                              width: 0.4,
+                              color: const Color(0xFFFFFFFF),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.more_vert_outlined,
+                            color: Color(0xFFFFFFFF),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                )
-              else
-                const Expanded(
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+
+                  // Weather image
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Container(
+                      height: 300,
+                      width: 300,
+                      decoration: const BoxDecoration(
+                        image: DecorationImage(
+                          image: AssetImage("assets/images/sunny.png"),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-            ],
+
+                  // temperature, humidity, date and time
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: GoogleFonts.openSans(height: 1.3),
+                        children: <TextSpan>[
+                          TextSpan(
+                            text: '${data!['current_weather']['temperature']}°C\n',
+                            style: TextStyle(
+                              fontSize: 75.0,
+                              fontWeight: FontWeight.w100,
+                              color: const Color(0xFFFFFFFF).withOpacity(0.7),
+                            ),
+                          ),
+
+                          //humidity
+                          TextSpan(
+                            text:
+                                'Humidity ${hourlyHumidities != null ? hourlyHumidities![0].toString() : "--"}%\n',
+                            style: const TextStyle(
+                              fontSize: 20.0,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFFFFFFF),
+                            ),
+                          ),
+                          TextSpan(
+                            text: '${formattedDate ?? ""} · ${formattedTime ?? ""}',
+                            style: TextStyle(
+                              fontSize: 14.0,
+                              color: const Color(0xFFFFFFFF).withOpacity(0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // hourly forecast
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        gradientText("Hourly Forecast", 20.0, FontWeight.bold),
+                        Container(
+                          padding: const EdgeInsets.all(2.0),
+                          height: 30.0,
+                          width: 30.0,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFFFF),
+                            borderRadius: BorderRadius.circular(100.0),
+                          ),
+                          child: const Icon(
+                            Icons.keyboard_arrow_left_outlined,
+                            color: Color(0xFF000000),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // hourly list
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(0.0),
+                      itemCount: hourlyTimes?.length ?? 0,
+                      itemBuilder: (context, index) {
+                        return Container(
+                          padding: const EdgeInsets.only(bottom: 12.0, top: 5.0),
+                          width: MediaQuery.of(context).size.width,
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                width: 0.4,
+                                color: Color(0xFFFFFFFF),
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              // time - hour
+                              Text(
+                                DateFormat('h a')
+                                    .format(DateTime.parse(hourlyTimes![index])),
+                                style: GoogleFonts.openSans(
+                                  fontSize: 20.0,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFFFFFFFF),
+                                ),
+                              ),
+                              // humidity
+                              Text(
+                                '${hourlyHumidities![index]}%',
+                                style: GoogleFonts.openSans(
+                                  fontSize: 16.0,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFFFFFFFF),
+                                ),
+                              ),
+                              // temperature
+                              Text(
+                                '${hourlyTemperatures![index]}°C',
+                                style: GoogleFonts.openSans(
+                                  fontSize: 24.0,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFFFFFFFF),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
-    );
+        );
   }
 }
