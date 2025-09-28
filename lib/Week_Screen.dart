@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
 
 class WeekScreen extends StatefulWidget {
   const WeekScreen({super.key});
@@ -65,6 +67,10 @@ class _WeekScreenState extends State<WeekScreen> {
       case 63:
       case 65:
         return 'Showers';
+      case 71:
+      case 73:
+      case 75:
+        return 'Snow';
       case 80:
       case 81:
       case 82:
@@ -76,6 +82,38 @@ class _WeekScreenState extends State<WeekScreen> {
       default:
         return 'Unknown';
     }
+  }
+  Widget buildWeatherIcon(int code) {
+  String path = getWeatherIcon(code);
+
+  if (path.endsWith('.svg')) {
+    return SvgPicture.asset(
+      path,
+      width: 50,
+      height: 50,
+    );
+  } else {
+    return Image.asset(
+      path,
+      width: 50,
+      height: 50,
+    );
+  }
+}
+
+
+  // Get weather icon asset path
+  String getWeatherIcon(int weathercode) {
+    if (weathercode == 0) return 'assets/icons/day.svg';
+    if (weathercode >= 1 && weathercode <= 3) return 'assets/icons/cloudy.svg';
+    if (weathercode == 45 || weathercode == 48) return 'assets/icons/fog_8047121.png';
+    if ((weathercode >= 51 && weathercode <= 67) ||
+        (weathercode >= 80 && weathercode <= 82)) {
+      return 'assets/icons/rainy-6.svg';
+    }
+    if (weathercode >= 71 && weathercode <= 77) return 'assets/icons/snowy-6.svg';
+    if (weathercode >= 95 && weathercode <= 99) return 'assets/icons/thunder.svg';
+    return 'assets/icons/cloudy.svg'; // default
   }
 
   // Function to navigate back
@@ -196,12 +234,15 @@ class _WeekScreenState extends State<WeekScreen> {
                 String description =
                     getWeatherDescription(dailyWeatherCode![index]);
                 String temp = "${dailyTemperature![index].round()}°C";
+                String iconPath =
+                    getWeatherIcon(dailyWeatherCode![index]);
 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      // Day
                       Text(
                         day,
                         style: GoogleFonts.openSans(
@@ -209,13 +250,25 @@ class _WeekScreenState extends State<WeekScreen> {
                           color: Colors.white,
                         ),
                       ),
-                      Text(
-                        description,
-                        style: GoogleFonts.openSans(
-                          fontSize: 16,
-                          color: Colors.white70,
-                        ),
+                      // Weather description + icon
+                      Row(
+                        children: [
+                          Text(
+                            description,
+                            style: GoogleFonts.openSans(
+                              fontSize: 16,
+                              color: Colors.white70,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Image.asset(
+                            iconPath,
+                            height: 28,
+                            width: 28,
+                          ),
+                        ],
                       ),
+                      // Temperature
                       Text(
                         temp,
                         style: GoogleFonts.openSans(
