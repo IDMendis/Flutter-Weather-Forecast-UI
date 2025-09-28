@@ -31,6 +31,25 @@ class _HomeScreenState extends State<HomeScreen> {
   String? currentCity;
   bool isNightTheme = false;
 
+   String getWeatherGif(String condition) {
+  condition = condition.toLowerCase();
+
+  if (condition.contains("cloud")) {
+    return "assets/images/clouds.png";
+  } else if (condition.contains("rain")) {
+    return "assets/images/rainy-day.png";
+  } else if (condition.contains("snow")) {
+    return "assets/images/snowflake.png";
+  } else if (condition.contains("thunder")) {
+    return "assets/images/Fallen tree and wind.gif";
+  } else if (condition.contains("sun") || condition.contains("clear")) {
+    return "assets/images/sunny.png";
+  } else {
+    return "assets/images/Fallen tree and wind.gif"; // fallback
+  }
+}
+
+
   @override
   void initState() {
     super.initState();
@@ -78,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
         greetings = 'Good Evening!';
       }
 
-      // night/day theme logic
+        // night/day theme logic
       final sunrise = DateTime.fromMillisecondsSinceEpoch(
           weatherResult["sys"]["sunrise"] * 1000,
           isUtc: true).toLocal();
@@ -209,7 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
 
-                    // 🔍 Search bar
+                    // Search bar
                     Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 0, vertical: 12),
@@ -237,18 +256,37 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
 
                     // Weather image
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Container(
-                        height: 200,
-                        width: 200,
-                        decoration: const BoxDecoration(
-                          image: DecorationImage(
-                            image: AssetImage("assets/images/sunny.png"),
-                          ),
-                        ),
-                      ),
-                    ),
+                    // Padding(
+                    //   padding: const EdgeInsets.all(16.0),
+                    //   child: Container(
+                    //     height: 200,
+                    //     width: 200,
+                    //     decoration: const BoxDecoration(
+                    //       image: DecorationImage(
+                    //         image: AssetImage("assets/images/sunny.png"),
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
+
+
+                    // Weather GIF (instead of static icon)
+Padding(
+  padding: const EdgeInsets.all(16.0),
+  child: Container(
+    height: 200,
+    width: 200,
+    decoration: BoxDecoration(
+      image: DecorationImage(
+        image: AssetImage(
+          getWeatherGif(data!['weather'][0]['description']),
+        ),
+        fit: BoxFit.contain,
+      ),
+    ),
+  ),
+),
+
 
                     // temp, humidity, date/time
                     RichText(
@@ -293,7 +331,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
 
-                    // ⬇️ hourly forecast scroll
+                    // ⬇hourly forecast scroll
                     Expanded(
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -306,18 +344,32 @@ class _HomeScreenState extends State<HomeScreen> {
                               style: GoogleFonts.poppins(
                                   color: Colors.white, fontSize: 16),
                             ),
-                            title: Text(
+                            title: Text( // Removed the Row here, as the image is for humidity
                               "${hourlyTemperatures![index]}°C",
                               style: GoogleFonts.poppins(
                                   color: Colors.white,
                                   fontSize: 18,
                                   fontWeight: FontWeight.w500),
                             ),
-                            trailing: Text(
-                              "Humidity: ${hourlyHumidities![index]}%",
-                              style: GoogleFonts.poppins(
-                                  color: Colors.white70, fontSize: 14),
+
+                            trailing: Row( // Use a Row for the trailing widget to place text and image
+                              mainAxisSize: MainAxisSize.min, // Keep the row compact
+                              children: [
+                                Text(
+                                  "Humidity: ${hourlyHumidities![index]}%",
+                                  style: GoogleFonts.poppins(
+                                      color: Colors.white70, fontSize: 14),
+                                ),
+                                SizedBox(width: 4), // Add some spacing
+                                Image.asset(
+                                  'assets/images/Humidity-icon.png',
+                                  width: 20, // Adjust width as needed
+                                  height: 20, // Adjust height as needed
+                                  color: Colors.white70, // Optional: if you want to tint the image
+                                ),
+                              ],
                             ),
+
                           );
                         },
                       ),
