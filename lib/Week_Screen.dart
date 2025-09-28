@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart'; 
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -46,6 +46,7 @@ class _WeekScreenState extends State<WeekScreen> {
     }
   }
 
+  // Get the weather description based on the weather code
   String getWeatherDescription(int weathercode) {
     switch (weathercode) {
       case 0:
@@ -75,6 +76,39 @@ class _WeekScreenState extends State<WeekScreen> {
         return 'Thunderstorm';
       default:
         return 'Unknown';
+    }
+  }
+
+  // Get the corresponding weather icon based on the weather code
+  String getWeatherIcon(int weathercode) {
+    switch (weathercode) {
+      case 0:
+        return 'assets/icons/clear_sky.png';
+      case 1:
+      case 2:
+      case 3:
+        return 'assets/images/clouds.png';
+      case 45:
+      case 48:
+        return 'assets/icons/fog.png';
+      case 51:
+      case 53:
+      case 55:
+        return 'assets/icons/drizzle.png';
+      case 61:
+      case 63:
+      case 65:
+        return 'assets/images/rainy-7.svg';
+      case 80:
+      case 81:
+      case 82:
+        return 'assets/images/rainy-6.svg';
+      case 95:
+      case 96:
+      case 99:
+        return 'assets/icons/thunderstorm.png';
+      default:
+        return 'assets/images/cloudy-day-1.svg';
     }
   }
 
@@ -196,36 +230,52 @@ class _WeekScreenState extends State<WeekScreen> {
                 String description =
                     getWeatherDescription(dailyWeatherCode![index]);
                 String temp = "${dailyTemperature![index].round()}°C";
+                String iconPath = getWeatherIcon(dailyWeatherCode![index]);
 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        day,
-                        style: GoogleFonts.openSans(
-                          fontSize: 20,
-                          color: Colors.white,
+                return Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          day,
+                          style: GoogleFonts.openSans(
+                            fontSize: 20,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      Text(
-                        description,
-                        style: GoogleFonts.openSans(
-                          fontSize: 16,
-                          color: Colors.white70,
+                        Row(
+                          children: [
+                            Image.asset(
+                              iconPath,
+                              width: 30,
+                              height: 30,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              description,
+                              style: GoogleFonts.openSans(
+                                fontSize: 16,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      Text(
-                        temp,
-                        style: GoogleFonts.openSans(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                        Text(
+                          temp,
+                          style: GoogleFonts.openSans(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                    const Divider(
+                      color: Colors.white70,
+                      thickness: 0.5,
+                    ),
+                  ],
                 );
               },
             ),
