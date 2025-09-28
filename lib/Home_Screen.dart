@@ -6,6 +6,10 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'Week_Screen.dart';
 
+// Your API keys
+final String geoApiKey = "fdda7ec20d2f4f60a191accf4a00df16";
+final String weatherApiKey = "af32a05a4e6743cb8560438c6a345cb1";
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -14,77 +18,107 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Variables
-  Map<String, dynamic>? data;
-  List<dynamic>? hourlyTimes;
-  List<dynamic>? hourlyTemperatures;
-  List<dynamic>? hourlyHumidities;
-  String? timezone;
+  Map<String, dynamic>? data; // current weather
   String? greetings;
   String? formattedDate;
   String? formattedTime;
 
+  List<dynamic>? hourlyTemperatures;
+  List<dynamic>? hourlyTimes;
+  List<dynamic>? hourlyHumidities;
+
+  TextEditingController searchController = TextEditingController();
+  String? currentCity;
+  bool isNightTheme = false;
+
   @override
   void initState() {
     super.initState();
-    fetchData();
+    getCurrentCity();
   }
 
-  /// Fetch Weather Data
-  void fetchData() async {
-    Uri url = Uri.parse(
-        'https://api.open-meteo.com/v1/forecast?latitude=37.7749&longitude=-122.4194&hourly=temperature_2m,relative_humidity_2m&current_weather=true&timezone=GMT');
+  /// Fetch current city using ipgeolocation.io
+  Future<void> getCurrentCity() async {
+    final url = Uri.parse("https://api.ipgeolocation.io/ipgeo?apiKey=$geoApiKey");
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
+      final result = json.decode(response.body);
       setState(() {
-        data = json.decode(response.body);
-        hourlyTimes = data!['hourly']['time'].sublist(0, 24);
-        hourlyTemperatures = data!['hourly']['temperature_2m'].sublist(0, 24);
-        hourlyHumidities = data!['hourly']['relative_humidity_2m'].sublist(0, 24);
-        timezone = data!['timezone'];
-
-        // formatted date and time
-        DateTime currentTime = DateTime.parse(data!['current_weather']['time']);
-        int currentHour = currentTime.hour;
-
-        if (currentHour < 12) {
-          greetings = 'Good Morning!';
-        } else if (currentHour < 17) {
-          greetings = 'Good Afternoon!';
-        } else {
-          greetings = 'Good Evening!';
-        }
-
-        formattedDate = DateFormat('EEEE, MMM d, y').format(currentTime);
-        formattedTime = DateFormat('h:mm a').format(currentTime);
+        currentCity = result["city"];
       });
+      fetchWeatherByCity(currentCity!);
     } else {
-      print('Error: ${response.statusCode}');
+      debugPrint("Error fetching location: ${response.statusCode}");
     }
   }
 
-  /// Function to create gradient text
-  Widget gradientText(String text, double fontSize, FontWeight fontWeight) {
-    return ShaderMask(
-      shaderCallback: (bounds) => const LinearGradient(
-        colors: [Color(0xFFFFA500), Color(0xFF8A2BE2)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ).createShader(bounds),
-      child: Text(
-        text,
-        style: GoogleFonts.openSans(
-          fontSize: fontSize,
-          fontWeight: fontWeight,
-          color: Colors.white,
-        ),
-      ),
-    );
+  /// Fetch current + hourly forecast
+  Future<void> fetchWeatherByCity(String city) async {
+    final weatherUrl = Uri.parse(
+        "https://api.openweathermap.org/data/2.5/weather?q=$city&appid=$weatherApiKey&units=metric");
+
+    final forecastUrl = Uri.parse(
+        "https://api.openweathermap.org/data/2.5/forecast?q=$city&appid=$weatherApiKey&units=metric");
+
+    final weatherRes = await http.get(weatherUrl);
+    final forecastRes = await http.get(forecastUrl);
+
+    if (weatherRes.statusCode == 200 && forecastRes.statusCode == 200) {
+      final weatherResult = json.decode(weatherRes.body);
+      final forecastResult = json.decode(forecastRes.body);
+
+      // greeting logic
+      int currentHour = DateTime.now().hour;
+      if (currentHour < 12) {
+        greetings = 'Good Morning!';
+      } else if (currentHour < 17) {
+        greetings = 'Good Afternoon!';
+      } else {
+        greetings = 'Good Evening!';
+      }
+
+      // night/day theme logic
+      final sunrise = DateTime.fromMillisecondsSinceEpoch(
+          weatherResult["sys"]["sunrise"] * 1000,
+          isUtc: true).toLocal();
+      final sunset = DateTime.fromMillisecondsSinceEpoch(
+          weatherResult["sys"]["sunset"] * 1000,
+          isUtc: true).toLocal();
+      final now = DateTime.now();
+      isNightTheme = now.isBefore(sunrise) || now.isAfter(sunset);
+
+      setState(() {
+        data = weatherResult;
+        formattedDate = DateFormat('EEEE, MMM d, y').format(DateTime.now());
+        formattedTime = DateFormat('h:mm a').format(DateTime.now());
+
+        // hourly forecast (next 8 = 24 hrs)
+        hourlyTimes = forecastResult["list"]
+            .take(8)
+            .map((e) => e["dt_txt"])
+            .toList();
+        hourlyTemperatures = forecastResult["list"]
+            .take(8)
+            .map((e) => e["main"]["temp"])
+            .toList();
+        hourlyHumidities = forecastResult["list"]
+            .take(8)
+            .map((e) => e["main"]["humidity"])
+            .toList();
+      });
+    } else {
+      debugPrint("Error fetching weather: "
+          "${weatherRes.statusCode}, ${forecastRes.statusCode}");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final backgroundGradient = isNightTheme
+        ? [Colors.indigo[900]!, Colors.black] // night theme
+        : [Colors.orange, Colors.blueAccent]; // day theme
+
     return Scaffold(
       body: data == null
           ? Container(
@@ -94,11 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    const Color(0xFFFFA500), // Orange
-                    const Color(0xFF8A2BE2).withOpacity(0.6), // Purple
-                    const Color(0xFF000000), // Black
-                  ],
+                  colors: backgroundGradient,
                 ),
               ),
               child: const Center(
@@ -107,120 +137,143 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             )
-            
-      : Container(
-          height: MediaQuery.of(context).size.height,
-          width: MediaQuery.of(context).size.width,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFFFFA500),
-                const Color(0xFF8A2BE2).withOpacity(0.6),
-                const Color(0xFF000000),
-              ],
-            ),
-          ),
-          child: Padding(
-              padding: const EdgeInsets.only(top: 60.0, right: 16.0, left: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Timezone, greet and more icon in a row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Timezone and greet
-                      RichText(
-                        text: TextSpan(
-                          style: GoogleFonts.openSans(height: 1.1),
-                          children: <TextSpan>[
-                            TextSpan(
-                              text: '${timezone ?? ""}\n',
-                              style: TextStyle(
-                                fontSize: 16.0,
-                                fontWeight: FontWeight.w100,
-                                color: const Color(0xFFFFFFFF).withOpacity(0.7),
+          : Container(
+              height: MediaQuery.of(context).size.height,
+              width: MediaQuery.of(context).size.width,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: backgroundGradient,
+                ),
+              ),
+              child: Padding(
+                padding:
+                    const EdgeInsets.only(top: 60.0, right: 16.0, left: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // City name, greeting & more btn
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        RichText(
+                          text: TextSpan(
+                            style: GoogleFonts.openSans(height: 1.1),
+                            children: <TextSpan>[
+                              TextSpan(
+                                text: '${currentCity ?? ""}\n',
+                                style: TextStyle(
+                                  fontSize: 16.0,
+                                  fontWeight: FontWeight.w100,
+                                  color:
+                                      const Color(0xFFFFFFFF).withOpacity(0.7),
+                                ),
                               ),
-                            ),
-                            TextSpan(
-                              text: greetings ?? "",
-                              style: const TextStyle(
-                                fontSize: 20.0,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFFFFFFFF),
+                              TextSpan(
+                                text: greetings ?? "",
+                                style: const TextStyle(
+                                  fontSize: 20.0,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFFFFFFFF),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-
-                      // more icon
-                      GestureDetector(  // this will make the icon tappable
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const WeekScreen(),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const WeekScreen(),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(2.0),
+                            height: 40.0,
+                            width: 40.0,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(100.0),
+                              border: Border.all(
+                                width: 0.4,
+                                color: const Color(0xFFFFFFFF),
+                              ),
                             ),
-                          );
-                          // Action for more icon tap
+                            child: const Icon(
+                              Icons.more_vert_outlined,
+                              color: Color(0xFFFFFFFF),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // 🔍 Search bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 0, vertical: 12),
+                      child: TextField(
+                        controller: searchController,
+                        decoration: InputDecoration(
+                          hintText: "Enter city...",
+                          prefixIcon:
+                              const Icon(Icons.search, color: Colors.white),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.2),
+                          hintStyle: const TextStyle(color: Colors.white70),
+                        ),
+                        style: const TextStyle(color: Colors.white),
+                        onSubmitted: (value) {
+                          if (value.isNotEmpty) {
+                            fetchWeatherByCity(value);
+                            setState(() => currentCity = value);
+                          }
                         },
-                        child: Container(
-                          padding: const EdgeInsets.all(2.0),
-                          height: 40.0,
-                          width: 40.0,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(100.0),
-                            border: Border.all(
-                              width: 0.4,
-                              color: const Color(0xFFFFFFFF),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.more_vert_outlined,
-                            color: Color(0xFFFFFFFF),
-                          ),
-                        ),
                       ),
-                    ],
-                  ),
+                    ),
 
-                  // Weather image
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Container(
-                      height: 300,
-                      width: 300,
-                      decoration: const BoxDecoration(
-                        image: DecorationImage(
-                          image: AssetImage("assets/images/sunny.png"),
+                    // Weather image
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Container(
+                        height: 200,
+                        width: 200,
+                        decoration: const BoxDecoration(
+                          image: DecorationImage(
+                            image: AssetImage("assets/images/sunny.png"),
+                          ),
                         ),
                       ),
                     ),
-                  ),
 
-                  // temperature, humidity, date and time
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16.0),
-                    child: RichText(
+                    // temp, humidity, date/time
+                    RichText(
                       textAlign: TextAlign.center,
                       text: TextSpan(
                         style: GoogleFonts.openSans(height: 1.3),
                         children: <TextSpan>[
                           TextSpan(
-                            text: '${data!['current_weather']['temperature']}°C\n',
+                            text: '${currentCity ?? "Unknown City"}\n',
+                            style: const TextStyle(
+                              fontSize: 28.0,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          TextSpan(
+                            text: '${data!['main']['temp']}°C\n',
                             style: TextStyle(
                               fontSize: 75.0,
                               fontWeight: FontWeight.w100,
                               color: const Color(0xFFFFFFFF).withOpacity(0.7),
                             ),
                           ),
-
-                          //humidity
                           TextSpan(
-                            text:
-                                'Humidity ${hourlyHumidities != null ? hourlyHumidities![0].toString() : "--"}%\n',
+                            text: 'Humidity ${data!['main']['humidity']}%\n',
                             style: const TextStyle(
                               fontSize: 20.0,
                               fontWeight: FontWeight.w600,
@@ -228,99 +281,51 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           TextSpan(
-                            text: '${formattedDate ?? ""} · ${formattedTime ?? ""}',
+                            text:
+                                '${formattedDate ?? ""} · ${formattedTime ?? ""}\n',
                             style: TextStyle(
                               fontSize: 14.0,
-                              color: const Color(0xFFFFFFFF).withOpacity(0.7),
+                              color:
+                                  const Color(0xFFFFFFFF).withOpacity(0.7),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
 
-                  // hourly forecast
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        gradientText("Hourly Forecast", 20.0, FontWeight.bold),
-                        Container(
-                          padding: const EdgeInsets.all(2.0),
-                          height: 30.0,
-                          width: 30.0,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFFFFF),
-                            borderRadius: BorderRadius.circular(100.0),
-                          ),
-                          child: const Icon(
-                            Icons.keyboard_arrow_left_outlined,
-                            color: Color(0xFF000000),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // hourly list
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(0.0),
-                      itemCount: hourlyTimes?.length ?? 0,
-                      itemBuilder: (context, index) {
-                        return Container(
-                          padding: const EdgeInsets.only(bottom: 12.0, top: 5.0),
-                          width: MediaQuery.of(context).size.width,
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                width: 0.4,
-                                color: Color(0xFFFFFFFF),
-                              ),
+                    // ⬇️ hourly forecast scroll
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        itemCount: hourlyTimes?.length ?? 0,
+                        itemBuilder: (context, index) {
+                          return ListTile(
+                            leading: Text(
+                              DateFormat('h a')
+                                  .format(DateTime.parse(hourlyTimes![index])),
+                              style: GoogleFonts.poppins(
+                                  color: Colors.white, fontSize: 16),
                             ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              // time - hour
-                              Text(
-                                DateFormat('h a')
-                                    .format(DateTime.parse(hourlyTimes![index])),
-                                style: GoogleFonts.openSans(
-                                  fontSize: 20.0,
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFFFFFFFF),
-                                ),
-                              ),
-                              // humidity
-                              Text(
-                                '${hourlyHumidities![index]}%',
-                                style: GoogleFonts.openSans(
-                                  fontSize: 16.0,
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFFFFFFFF),
-                                ),
-                              ),
-                              // temperature
-                              Text(
-                                '${hourlyTemperatures![index]}°C',
-                                style: GoogleFonts.openSans(
-                                  fontSize: 24.0,
-                                  fontWeight: FontWeight.w500,
-                                  color: const Color(0xFFFFFFFF),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                            title: Text(
+                              "${hourlyTemperatures![index]}°C",
+                              style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                            trailing: Text(
+                              "Humidity: ${hourlyHumidities![index]}%",
+                              style: GoogleFonts.poppins(
+                                  color: Colors.white70, fontSize: 14),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        );
+    );
   }
 }
